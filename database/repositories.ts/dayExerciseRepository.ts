@@ -108,15 +108,12 @@ export async function getExerciseByDay(
   }
 
   try {
-    const day_exercises = await db.getAllAsync<DayExercise>(
+    return await db.getAllAsync<DayExercise>(
       `SELECT * FROM day_exercise WHERE day_id = ?`,
       [day_id],
     );
-    if (day_exercises.length === 0)
-      throw new Error(`No se encontraron ejercicios para el dia ${day_id}`);
-    return day_exercises;
   } catch (error) {
-    throw new Error(`No se pudieron obtener los ejercisios. Error: ${error}`);
+    throw new Error(`No se pudieron obtener los ejercicios. Error: ${error}`);
   }
 }
 
@@ -170,7 +167,7 @@ export async function updateDayExercise(
   }
 }
 
-export async function deleteRoutine(
+export async function deleteDayExercise(
   db: SQLiteDatabase,
   day_ex_id: number,
 ): Promise<boolean> {

@@ -2,48 +2,46 @@ import { val_text_only } from "@/helpers/validators";
 import { Day } from "@/types/day";
 import { SQLiteDatabase } from "expo-sqlite";
 
+// Helper local para validar IDs (idealmente lo movés a helpers/validators.ts)
+function val_id(value: number, fieldName: string): void {
+  if (!Number.isInteger(value) || value <= 0 || value > 999999) {
+    throw new Error(
+      `${fieldName} debe ser un entero positivo válido.: ${value}`,
+    );
+  }
+}
+
 export async function createDay(
   db: SQLiteDatabase,
   day_desc: string,
   routine_id: number,
 ): Promise<Day> {
   if (!day_desc || day_desc.trim() === "") {
-    throw new Error("El nombre del dia no puede estar vacio.");
+    throw new Error("El nombre del día no puede estar vacío.");
   }
   if (day_desc.length > 100) {
-    throw new Error("El nombre no puede superar los 100 caracteres");
+    throw new Error("El nombre no puede superar los 100 caracteres.");
   }
 
   const sanitized = day_desc.trim();
-
-  val_text_only(sanitized, "El nombre del dia");
-
-  if (!routine_id || isNaN(Number(routine_id)) || routine_id <= 0) {
-    throw new Error(`El id de rutina ebe ser un numero valido mayor que 0.`);
-  }
-
-  if (Number(routine_id) > 999999) {
-    throw new Error(`El id de rutina supera el rango maximo.`);
-  }
-  if (Number.isInteger(routine_id)) {
-    throw new Error(`El id debe ser un numero entero.`);
-  }
+  val_text_only(sanitized, "El nombre del día");
+  val_id(routine_id, "El id de rutina");
 
   try {
     const existing = await db.getFirstAsync<Day>(
       `SELECT * 
-            FROM day 
-            WHERE routine_id = ?
-            AND LOWER(day_desc) = LOWER(?)`,
-
+       FROM day 
+       WHERE routine_id = ?
+       AND LOWER(day_desc) = LOWER(?)`,
       [routine_id, sanitized],
     );
 
     if (existing) {
-      throw new Error(`El dia "${sanitized}" ya existe en esta rutina.`);
+      throw new Error(`El día "${sanitized}" ya existe en esta rutina.`);
     }
+
     const result = await db.runAsync(
-      `INSERT INTO day (day_desc, routine_id) VALUES(?,?)`,
+      `INSERT INTO day (day_desc, routine_id) VALUES (?, ?)`,
       [sanitized, routine_id],
     );
 
@@ -52,11 +50,11 @@ export async function createDay(
       [result.lastInsertRowId],
     );
 
-    if (!created) throw new Error(`Error al recuperar el dia creado.`);
+    if (!created) throw new Error("Error al recuperar el día creado.");
     return created;
   } catch (error) {
     if (error instanceof Error) throw error;
-    throw new Error(`Error al crear ejercicio: ${error}`);
+    throw new Error(`Error al crear día: ${error}`);
   }
 }
 
@@ -64,44 +62,26 @@ export async function getDayById(
   db: SQLiteDatabase,
   day_id: number,
 ): Promise<Day> {
-  if (!day_id || isNaN(Number(day_id)) || day_id <= 0) {
-    throw new Error("El id del dia debe ser un numero valido o mayor que 0.");
-  }
-  if (Number(day_id) > 999999) {
-    throw new Error("El id del ejercicio supera el rango maximo.");
-  }
-
-  if (!Number.isInteger(day_id)) {
-    throw new Error("El id debe ser un numero entero");
-  }
+  val_id(day_id, "El id del día");
 
   try {
     const day = await db.getFirstAsync<Day>(
       `SELECT * FROM day WHERE day_id = ?`,
       [day_id],
     );
-    if (!day) throw new Error(`No se encontró el dia con id ${day_id}`);
+    if (!day) throw new Error(`No se encontró el día con id ${day_id}`);
     return day;
   } catch (error) {
     if (error instanceof Error) throw error;
-    throw new Error(`No se pudo obtener los dias ${error}`);
+    throw new Error(`No se pudo obtener el día: ${error}`);
   }
 }
 
-export async function getAllDays(
+export async function getDaysByRoutineId(
   db: SQLiteDatabase,
   routine_id: number,
 ): Promise<Day[]> {
-  if (!routine_id || isNaN(Number(routine_id)) || routine_id <= 0) {
-    throw new Error(`El id de rutina ebe ser un numero valido mayor que 0.`);
-  }
-
-  if (Number(routine_id) > 999999) {
-    throw new Error(`El id debe ser un numero entero.`);
-  }
-  if (Number.isInteger(routine_id)) {
-    throw new Error(`El id debe ser un numero entero.`);
-  }
+  val_id(routine_id, "El id de rutina");
 
   try {
     return await db.getAllAsync<Day>(`SELECT * FROM day WHERE routine_id = ?`, [
@@ -109,7 +89,7 @@ export async function getAllDays(
     ]);
   } catch (error) {
     if (error instanceof Error) throw error;
-    throw new Error(`No se pudo obtener los dias. Error: ${error}`);
+    throw new Error(`No se pudo obtener los días. Error: ${error}`);
   }
 }
 
@@ -120,59 +100,44 @@ export async function updateDay(
   routine_id: number,
 ): Promise<boolean> {
   if (!day_desc) {
-    throw new Error(`La descripcion de el dia puede ser nula`);
+    throw new Error("La descripción del día no puede ser nula.");
   }
+
   const sanitized_desc = day_desc.trim();
 
   if (sanitized_desc === "") {
-    throw new Error(`La descripcion de el dia puede estar vacia`);
+    throw new Error("La descripción del día no puede estar vacía.");
   }
-
   if (sanitized_desc.length > 100) {
-    throw new Error(`La descripcion no puede superar los 100 caracteres. `);
+    throw new Error("La descripción no puede superar los 100 caracteres.");
   }
 
-  if (!day_id || isNaN(Number(day_id)) || day_id <= 0) {
-    throw new Error(`El id de dia debe ser un numero valido mayor que 0`);
-  }
-
-  if (Number(day_id) > 999999) {
-    throw new Error(`El id de dia supera el rango maximo`);
-  }
-
-  if (!Number.isInteger(day_id)) {
-    throw new Error(`El id debe ser un numero entero`);
-  }
-
-  if (!routine_id || isNaN(Number(routine_id)) || routine_id <= 0) {
-    throw new Error(`El id de rutina debe ser un numero valido mayor que 0.`);
-  }
-
-  if (Number(routine_id) > 999999) {
-    throw new Error(`El id de rutina supera el rango maximo.`);
-  }
-  if (!Number.isInteger(routine_id)) {
-    throw new Error(`El id debe ser un numero entero.`);
-  }
+  val_id(day_id, "El id del día");
+  val_id(routine_id, "El id de rutina");
 
   try {
     const pre_update = await db.getFirstAsync<Day>(
-      `SELECT * FROM day WHERE routine_id = ? and LOWER(day_desc) = LOWER(?)`,
-      [routine_id, sanitized_desc],
+      `SELECT * FROM day 
+       WHERE routine_id = ? 
+       AND LOWER(day_desc) = LOWER(?)
+       AND day_id != ?`,
+      [routine_id, sanitized_desc, day_id],
     );
+
     if (pre_update) {
       throw new Error(
-        `La rutina ya tiene un dia con descripcion : "${sanitized_desc}".`,
+        `La rutina ya tiene un día con descripción: "${sanitized_desc}".`,
       );
     }
+
     const result = await db.runAsync(
-      `UPDATE day Set day_desc = ? WHERE day_id = ?`,
+      `UPDATE day SET day_desc = ? WHERE day_id = ?`,
       [sanitized_desc, day_id],
     );
     return result.changes > 0;
   } catch (error) {
     if (error instanceof Error) throw error;
-    throw new Error(`No se pudo actualizar la rutina. Error: ${error}`);
+    throw new Error(`No se pudo actualizar el día. Error: ${error}`);
   }
 }
 
@@ -180,17 +145,7 @@ export async function deleteDay(
   db: SQLiteDatabase,
   day_id: number,
 ): Promise<boolean> {
-  if (!day_id || isNaN(Number(day_id)) || day_id <= 0) {
-    throw new Error("El id de la rutina debe ser numero valido mayor que 0.");
-  }
-
-  if (Number(day_id) > 99999) {
-    throw new Error("El id supera el rango maximo.");
-  }
-
-  if (!Number.isInteger(day_id)) {
-    throw new Error("El id debe ser un numero entero.");
-  }
+  val_id(day_id, "El id del día");
 
   try {
     const day = await db.getFirstAsync<Day>(
@@ -198,14 +153,15 @@ export async function deleteDay(
       [day_id],
     );
     if (!day) {
-      throw new Error(`No existe un ejercicio con el id ${day_id}`);
+      throw new Error(`No existe un día con el id ${day_id}`);
     }
+
     const result = await db.runAsync(`DELETE FROM day WHERE day_id = ?`, [
       day_id,
     ]);
     return result.changes > 0;
   } catch (error) {
     if (error instanceof Error) throw error;
-    throw new Error(`No se pudo eliminar el ejercicio. Error: ${error}`);
+    throw new Error(`No se pudo eliminar el día. Error: ${error}`);
   }
 }

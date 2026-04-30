@@ -1,4 +1,4 @@
-import { Routine } from "@/types/routine";
+import { Day } from "@/types/day";
 import { StyleSheet } from "react-native";
 import { ThemedText } from "./themed-text";
 import { ThemedView } from "./themed-view";
@@ -6,37 +6,34 @@ import { Button } from "./ui/Button";
 import { IconSymbol } from "./ui/icon-symbol";
 
 type Props = {
-  routine: Routine;
-  onOpen: (routine: Routine) => void;
-  onEdit: (routine: Routine) => void;
-  onDelete: (routine: Routine) => void;
+  day: Day;
+  onOpen: (day: Day) => void;
+  onEdit: (day: Day) => void;
+  onDelete: (day: Day) => void;
 };
 
-export function RoutineListCard({ routine, onOpen, onEdit, onDelete }: Props) {
+export function DayCard({ day, onOpen, onEdit, onDelete }: Props) {
   return (
     <ThemedView style={styles.card}>
-      <ThemedText style={styles.name}>{routine.routine_desc}</ThemedText>
+      <ThemedText style={styles.name}>{day.day_desc}</ThemedText>
       <ThemedView style={styles.actions}>
         <Button
-          label=""
           variant="outline"
-          onPress={() => onOpen(routine)}
-          style={styles.btnEdit}
-          icon={<IconSymbol name="chevron.right" size={18} color="#185FA5" />}
+          onPress={() => onOpen(day)}
+          style={styles.btn}
+          icon={<IconSymbol name="chevron.right" size={22} color="#185FA5" />}
         />
         <Button
-          label=""
           variant="outline"
-          onPress={() => onEdit(routine)}
-          style={styles.btnEdit}
-          icon={<IconSymbol name="pencil" size={18} color="#185FA5" />}
+          onPress={() => onEdit(day)}
+          style={styles.btn}
+          icon={<IconSymbol name="pencil" size={22} color="#185FA5" />}
         />
         <Button
-          label=""
           variant="destructive"
-          onPress={() => onDelete(routine)}
-          style={styles.btnDelete}
-          icon={<IconSymbol name="trash" size={18} color="#A32D2D" />}
+          onPress={() => onDelete(day)}
+          style={styles.btn}
+          icon={<IconSymbol name="trash" size={22} color="#A32D2D" />}
         />
       </ThemedView>
     </ThemedView>
@@ -52,6 +49,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: "#E0E0E0",
+    padding: 4,
   },
   name: {
     fontSize: 15,
@@ -62,11 +60,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: 8,
   },
-  btnEdit: {
-    paddingVertical: 7,
-    paddingHorizontal: 14,
-  },
-  btnDelete: {
+  btn: {
     paddingVertical: 7,
     paddingHorizontal: 14,
   },

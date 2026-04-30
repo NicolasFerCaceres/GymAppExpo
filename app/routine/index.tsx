@@ -1,6 +1,6 @@
 import { ConfirmModal } from "@/components/confirm-modal";
 import { InputModal } from "@/components/input-modal";
-import { RoutineListCard } from "@/components/routine-list-card";
+import { RoutineCard } from "@/components/routine-card";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { Button } from "@/components/ui/Button";
@@ -11,7 +11,7 @@ import {
   updateRoutine,
 } from "@/database/repositories.ts/routineRepository";
 import { Routine } from "@/types/routine";
-import { useRouter } from "expo-router";
+import { Stack, useRouter } from "expo-router";
 import { useSQLiteContext } from "expo-sqlite";
 import { useEffect, useState } from "react";
 import { FlatList, StyleSheet, TextInput } from "react-native";
@@ -104,8 +104,8 @@ export default function RoutineListScreen() {
 
   return (
     <ThemedView style={styles.container}>
+      <Stack.Screen options={{ title: "Rutinas" }} />
       <ThemedView style={styles.header}>
-        <ThemedText type="title">Rutinas</ThemedText>
         <TextInput
           style={styles.search}
           placeholder="Buscar.."
@@ -118,7 +118,7 @@ export default function RoutineListScreen() {
         data={filtered}
         keyExtractor={(item) => item.routine_id.toString()}
         renderItem={({ item }) => (
-          <RoutineListCard
+          <RoutineCard
             routine={item}
             onOpen={(r) => router.push(`/routine/${r.routine_id}`)}
             onEdit={handleEdit}
@@ -159,7 +159,8 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   header: {
     padding: 16,
-    paddingTop: 56,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: "#E0E0E0",
     gap: 12,
   },
   search: {

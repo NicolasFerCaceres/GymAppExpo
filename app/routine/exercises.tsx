@@ -109,10 +109,8 @@ export default function ExercisesScreen() {
 
   return (
     <ThemedView style={styles.container}>
-      <Stack.Screen options={{ title: "" }} />
+      <Stack.Screen options={{ title: "Ejercicios" }} />
       <ThemedView style={styles.header}>
-        <ThemedText type="title">Ejercicios</ThemedText>
-
         <TextInput
           style={styles.search}
           placeholder="Buscar..."
@@ -165,6 +163,8 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   header: {
     padding: 16,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: "#E0E0E0",
     gap: 12,
   },
   search: {
