@@ -2,10 +2,10 @@ import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { Button } from "@/components/ui/Button";
 import {
-  getDayExercise,
-  updateDayExercise,
-} from "@/database/repositories.ts/dayExerciseRepository";
-import { getExerciseById } from "@/database/repositories.ts/exerciseRepository";
+    getDayExercise,
+    updateDayExercise,
+} from "@/database/repositories/dayExerciseRepository";
+import { getExerciseById } from "@/database/repositories/exerciseRepository";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { useSQLiteContext } from "expo-sqlite";
 import { useEffect, useState } from "react";

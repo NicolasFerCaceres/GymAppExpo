@@ -165,3 +165,68 @@ export async function deleteRoutine(
     throw new Error(`No se pudo eliminar el ejercicio. Error: ${error}`);
   }
 }
+
+export async function getActiveRoutine(
+  db: SQLiteDatabase,
+): Promise<Routine | null> {
+  try {
+    const result = await db.getFirstAsync<Routine>(
+      `SELECT * FROM routine WHERE is_active = 1 LIMIT 1`,
+    );
+    return result ?? null;
+  } catch (error) {
+    if (error instanceof Error) throw error;
+    throw new Error(`No se pudo obtener la rutina activa. Error: ${error}`);
+  }
+}
+
+export async function setActiveRoutine(
+  db: SQLiteDatabase,
+  routine_id: number,
+): Promise<boolean> {
+  if (!routine_id || isNaN(Number(routine_id)) || routine_id <= 0) {
+    throw new Error(
+      "El id de la rutina debe ser un numero valido mayor que 0.",
+    );
+  }
+  if (Number(routine_id) > 999999) {
+    throw new Error("El id de la rutina supera el rango maximo.");
+  }
+  if (!Number.isInteger(routine_id)) {
+    throw new Error("El id debe ser un numero entero.");
+  }
+
+  try {
+    const exists = await db.getFirstAsync<Routine>(
+      `SELECT * FROM routine WHERE routine_id = ?`,
+      [routine_id],
+    );
+    if (!exists) {
+      throw new Error(`No existe una rutina con el id ${routine_id}`);
+    }
+
+    // Desactivar todas y activar la elegida, en una transacción
+    await db.withTransactionAsync(async () => {
+      await db.runAsync(`UPDATE routine SET is_active = 0`);
+      await db.runAsync(
+        `UPDATE routine SET is_active = 1 WHERE routine_id = ?`,
+        [routine_id],
+      );
+    });
+
+    return true;
+  } catch (error) {
+    if (error instanceof Error) throw error;
+    throw new Error(`No se pudo establecer la rutina activa. Error: ${error}`);
+  }
+}
+
+export async function clearActiveRoutine(db: SQLiteDatabase): Promise<boolean> {
+  try {
+    const result = await db.runAsync(`UPDATE routine SET is_active = 0`);
+    return result.changes > 0;
+  } catch (error) {
+    if (error instanceof Error) throw error;
+    throw new Error(`No se pudo limpiar la rutina activa. Error: ${error}`);
+  }
+}

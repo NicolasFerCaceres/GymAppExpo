@@ -9,7 +9,7 @@ import {
   deleteRoutine,
   getAllRoutines,
   updateRoutine,
-} from "@/database/repositories.ts/routineRepository";
+} from "@/database/repositories/routineRepository";
 import { Routine } from "@/types/routine";
 import { Stack, useRouter } from "expo-router";
 import { useSQLiteContext } from "expo-sqlite";

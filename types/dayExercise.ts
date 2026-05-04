@@ -6,3 +6,7 @@ export interface DayExercise {
   reps: number;
   weight: number;
 }
+
+export interface DayExerciseDetail extends DayExercise {
+  exercise_name: string;
+}

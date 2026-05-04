@@ -4,19 +4,19 @@ import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { Button } from "@/components/ui/Button";
 import {
-  deleteDayExercise,
-  getExerciseByDay,
-} from "@/database/repositories.ts/dayExerciseRepository";
-import { getDayById } from "@/database/repositories.ts/dayRepository";
-import { getAllExercises } from "@/database/repositories.ts/exerciseRepository";
+    deleteDayExercise,
+    getExerciseByDay,
+} from "@/database/repositories/dayExerciseRepository";
+import { getDayById } from "@/database/repositories/dayRepository";
+import { getAllExercises } from "@/database/repositories/exerciseRepository";
 import { Day } from "@/types/day";
 import { DayExercise } from "@/types/dayExercise";
 import { Exercise } from "@/types/exercise";
 import {
-  Stack,
-  useFocusEffect,
-  useLocalSearchParams,
-  useRouter,
+    Stack,
+    useFocusEffect,
+    useLocalSearchParams,
+    useRouter,
 } from "expo-router";
 import { useSQLiteContext } from "expo-sqlite";
 import { useCallback, useState } from "react";

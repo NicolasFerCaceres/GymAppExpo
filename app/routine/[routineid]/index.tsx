@@ -5,12 +5,12 @@ import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { Button } from "@/components/ui/Button";
 import {
-  createDay,
-  deleteDay,
-  getDaysByRoutineId,
-  updateDay,
-} from "@/database/repositories.ts/dayRepository";
-import { getRoutineById } from "@/database/repositories.ts/routineRepository";
+    createDay,
+    deleteDay,
+    getDaysByRoutineId,
+    updateDay,
+} from "@/database/repositories/dayRepository";
+import { getRoutineById } from "@/database/repositories/routineRepository";
 import { Day } from "@/types/day";
 import { Routine } from "@/types/routine";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";

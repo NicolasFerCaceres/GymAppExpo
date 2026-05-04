@@ -9,7 +9,7 @@ import {
   deleteExercise,
   getAllExercises,
   updateExercise,
-} from "@/database/repositories.ts/exerciseRepository";
+} from "@/database/repositories/exerciseRepository";
 import { Exercise } from "@/types/exercise";
 import { Stack } from "expo-router";
 import { useSQLiteContext } from "expo-sqlite";

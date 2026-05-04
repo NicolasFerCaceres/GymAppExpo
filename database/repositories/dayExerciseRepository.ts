@@ -1,5 +1,6 @@
-import { DayExercise } from "@/types/dayExercise";
+import { DayExercise, DayExerciseDetail } from "@/types/dayExercise";
 import { SQLiteDatabase } from "expo-sqlite";
+
 
 export async function createDayExercise(
   db: SQLiteDatabase,
@@ -199,5 +200,40 @@ export async function deleteDayExercise(
   } catch (error) {
     if (error instanceof Error) throw error;
     throw new Error(`No se pudo el ejercicio. Error: ${error}`);
+  }
+}
+
+export async function getDayExercisesWithDetails(
+  db: SQLiteDatabase,
+  day_id: number,
+): Promise<DayExerciseDetail[]> {
+  if (
+    !day_id ||
+    isNaN(Number(day_id)) ||
+    !Number.isInteger(day_id) ||
+    day_id <= 0
+  ) {
+    throw new Error(`El id de dia debe ser un numero entero mayor que 0`);
+  }
+  try {
+    return await db.getAllAsync<DayExerciseDetail>(
+      `SELECT 
+         de.day_ex_id,
+         de.day_id,
+         de.exercise_id,
+         e.exercise_name,
+         de.sets,
+         de.reps,
+         de.weight
+       FROM day_exercise de
+       JOIN exercise e ON e.exercise_id = de.exercise_id
+       WHERE de.day_id = ?
+       ORDER BY de.day_ex_id`,
+      [day_id],
+    );
+  } catch (error) {
+    throw new Error(
+      `No se pudieron obtener los ejercicios del día. Error: ${error}`,
+    );
   }
 }
