@@ -4,20 +4,23 @@ import { Button } from "@/components/ui/Button";
 import { getDayExercisesWithDetails } from "@/database/repositories/dayExerciseRepository";
 import { getDayById } from "@/database/repositories/dayRepository";
 import { getRoutineById } from "@/database/repositories/routineRepository";
+import { createCompleteWorkout } from "@/database/repositories/workoutRepository";
+import { getLastSetForExercise } from "@/database/repositories/workoutSetRepository";
 import { Day } from "@/types/day";
 import { DayExerciseDetail } from "@/types/dayExercise";
 import { Routine } from "@/types/routine";
+import { NewWorkoutExercise } from "@/types/workout";
 import { Redirect, router, useLocalSearchParams } from "expo-router";
 import { useSQLiteContext } from "expo-sqlite";
 import { useEffect, useRef, useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    TextInput,
-    View,
+  ActivityIndicator,
+  Alert,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  TextInput,
+  View,
 } from "react-native";
 
 type SetEntry = {
@@ -31,6 +34,10 @@ type ExerciseSets = {
   [day_ex_id: number]: SetEntry[];
 };
 
+type LastSetByExercise = {
+  [exercise_id: number]: { reps: number; weight: number } | null;
+};
+
 export default function WorkoutScreen() {
   const db = useSQLiteContext();
   const { dayId } = useLocalSearchParams<{ dayId: string }>();
@@ -40,6 +47,7 @@ export default function WorkoutScreen() {
   const [routine, setRoutine] = useState<Routine | null>(null);
   const [exercises, setExercises] = useState<DayExerciseDetail[]>([]);
   const [sets, setSets] = useState<ExerciseSets>({});
+  const [lastSets, setLastSets] = useState<LastSetByExercise>({});
   const [loading, setLoading] = useState(true);
 
   const [restSeconds, setRestSeconds] = useState(0);
@@ -54,14 +62,29 @@ export default function WorkoutScreen() {
         const routineData = await getRoutineById(db, dayData.routine_id);
         const exerciseList = await getDayExercisesWithDetails(db, id);
 
+        const lastSetsArr = await Promise.all(
+          exerciseList.map((ex) =>
+            getLastSetForExercise(db, ex.exercise_id).catch(() => null),
+          ),
+        );
+
+        const lastSetsMap: LastSetByExercise = {};
+        exerciseList.forEach((ex, idx) => {
+          lastSetsMap[ex.exercise_id] = lastSetsArr[idx];
+        });
+
         const initialSets: ExerciseSets = {};
-        exerciseList.forEach((ex) => {
+        exerciseList.forEach((ex, idx) => {
+          const last = lastSetsArr[idx];
+          const repsToUse = last?.reps ?? ex.reps_min;
+          const weightToUse = last?.weight ?? ex.weight;
+
           initialSets[ex.day_ex_id] = Array.from(
             { length: ex.sets },
             (_, i) => ({
               set_number: i + 1,
-              reps: String(ex.reps),
-              weight: String(ex.weight),
+              reps: String(repsToUse),
+              weight: String(weightToUse),
               done: false,
             }),
           );
@@ -71,6 +94,7 @@ export default function WorkoutScreen() {
         setRoutine(routineData);
         setExercises(exerciseList);
         setSets(initialSets);
+        setLastSets(lastSetsMap);
       } catch (error) {
         Alert.alert(
           "Error",
@@ -127,7 +151,8 @@ export default function WorkoutScreen() {
     }));
 
     if (newDone) {
-      startRestTimer(90);
+      const exercise = exercises.find((e) => e.day_ex_id === dayExId);
+      startRestTimer(exercise?.rest_seconds ?? 90);
     }
   };
 
@@ -156,16 +181,65 @@ export default function WorkoutScreen() {
       .flat()
       .filter((s) => s.done).length;
 
+    if (doneSets === 0) {
+      Alert.alert(
+        "Sin series completadas",
+        "No marcaste ninguna serie como hecha. ¿Querés salir sin guardar?",
+        [
+          { text: "Seguir entrenando", style: "cancel" },
+          {
+            text: "Salir sin guardar",
+            style: "destructive",
+            onPress: () => router.replace("/"),
+          },
+        ],
+      );
+      return;
+    }
+
     Alert.alert(
       "Finalizar entreno",
-      `Completaste ${doneSets} de ${totalSets} series. ¿Finalizar?`,
+      `Completaste ${doneSets} de ${totalSets} series. ¿Guardar y finalizar?`,
       [
         { text: "Cancelar", style: "cancel" },
         {
-          text: "Finalizar",
-          onPress: () => {
-            // TODO: guardar workout en DB
-            router.replace("/");
+          text: "Guardar",
+          onPress: async () => {
+            try {
+              if (!routine) throw new Error("No hay rutina activa.");
+
+              const workoutExercises: NewWorkoutExercise[] = exercises
+                .map((ex, idx) => {
+                  const doneSetsForEx = (sets[ex.day_ex_id] || [])
+                    .filter((s) => s.done)
+                    .map((s) => ({
+                      set_number: s.set_number,
+                      reps: Number(s.reps),
+                      weight: Number(s.weight),
+                    }));
+
+                  return {
+                    exercise_id: ex.exercise_id,
+                    order_num: idx + 1,
+                    sets: doneSetsForEx,
+                  };
+                })
+                .filter((ex) => ex.sets.length > 0);
+
+              await createCompleteWorkout(db, {
+                routine_id: routine.routine_id,
+                exercises: workoutExercises,
+              });
+
+              Alert.alert("Listo", "Entreno guardado correctamente.", [
+                { text: "OK", onPress: () => router.replace("/") },
+              ]);
+            } catch (error) {
+              Alert.alert(
+                "Error al guardar",
+                error instanceof Error ? error.message : "Error desconocido",
+              );
+            }
           },
         },
       ],
@@ -193,62 +267,73 @@ export default function WorkoutScreen() {
             </ThemedText>
           </ThemedView>
         ) : (
-          exercises.map((ex) => (
-            <ThemedView key={ex.day_ex_id} style={styles.exerciseCard}>
-              <ThemedView style={styles.exerciseHeader}>
-                <ThemedText style={styles.exerciseName}>
-                  {ex.exercise_name}
-                </ThemedText>
-                <ThemedText style={styles.muted}>
-                  {ex.sets}x{ex.reps} · objetivo {ex.weight}kg
-                </ThemedText>
-              </ThemedView>
-
-              <ThemedView style={styles.setsHeader}>
-                <ThemedText style={styles.colNum}>#</ThemedText>
-                <ThemedText style={styles.colInput}>Reps</ThemedText>
-                <ThemedText style={styles.colInput}>Peso</ThemedText>
-                <ThemedText style={styles.colCheck}>✓</ThemedText>
-              </ThemedView>
-
-              {sets[ex.day_ex_id]?.map((s, idx) => (
-                <ThemedView
-                  key={s.set_number}
-                  style={[styles.setRow, s.done && styles.setRowDone]}
-                >
-                  <ThemedText style={styles.colNum}>{s.set_number}</ThemedText>
-                  <TextInput
-                    style={styles.input}
-                    value={s.reps}
-                    onChangeText={(v) =>
-                      updateSetField(ex.day_ex_id, idx, "reps", v)
-                    }
-                    keyboardType="numeric"
-                    placeholder="0"
-                    placeholderTextColor="#6b7280"
-                  />
-                  <TextInput
-                    style={styles.input}
-                    value={s.weight}
-                    onChangeText={(v) =>
-                      updateSetField(ex.day_ex_id, idx, "weight", v)
-                    }
-                    keyboardType="numeric"
-                    placeholder="0"
-                    placeholderTextColor="#6b7280"
-                  />
-                  <Pressable
-                    onPress={() => toggleSetDone(ex.day_ex_id, idx)}
-                    style={[styles.check, s.done && styles.checkDone]}
-                  >
-                    {s.done && (
-                      <ThemedText style={styles.checkText}>✓</ThemedText>
-                    )}
-                  </Pressable>
+          exercises.map((ex) => {
+            const lastSet = lastSets[ex.exercise_id];
+            return (
+              <ThemedView key={ex.day_ex_id} style={styles.exerciseCard}>
+                <ThemedView style={styles.exerciseHeader}>
+                  <ThemedText style={styles.exerciseName}>
+                    {ex.exercise_name}
+                  </ThemedText>
+                  <ThemedText style={styles.muted}>
+                    {ex.sets}x{ex.reps_min}-{ex.reps_max} · objetivo {ex.weight}
+                    kg · descanso {formatTime(ex.rest_seconds)}
+                  </ThemedText>
+                  {lastSet && (
+                    <ThemedText style={styles.lastHint}>
+                      Último: {lastSet.weight}kg × {lastSet.reps} reps
+                    </ThemedText>
+                  )}
                 </ThemedView>
-              ))}
-            </ThemedView>
-          ))
+
+                <ThemedView style={styles.setsHeader}>
+                  <ThemedText style={styles.colNum}>#</ThemedText>
+                  <ThemedText style={styles.colInput}>Reps</ThemedText>
+                  <ThemedText style={styles.colInput}>Peso</ThemedText>
+                  <ThemedText style={styles.colCheck}>✓</ThemedText>
+                </ThemedView>
+
+                {sets[ex.day_ex_id]?.map((s, idx) => (
+                  <ThemedView
+                    key={s.set_number}
+                    style={[styles.setRow, s.done && styles.setRowDone]}
+                  >
+                    <ThemedText style={styles.colNum}>
+                      {s.set_number}
+                    </ThemedText>
+                    <TextInput
+                      style={styles.input}
+                      value={s.reps}
+                      onChangeText={(v) =>
+                        updateSetField(ex.day_ex_id, idx, "reps", v)
+                      }
+                      keyboardType="numeric"
+                      placeholder="0"
+                      placeholderTextColor="#6b7280"
+                    />
+                    <TextInput
+                      style={styles.input}
+                      value={s.weight}
+                      onChangeText={(v) =>
+                        updateSetField(ex.day_ex_id, idx, "weight", v)
+                      }
+                      keyboardType="numeric"
+                      placeholder="0"
+                      placeholderTextColor="#6b7280"
+                    />
+                    <Pressable
+                      onPress={() => toggleSetDone(ex.day_ex_id, idx)}
+                      style={[styles.check, s.done && styles.checkDone]}
+                    >
+                      {s.done && (
+                        <ThemedText style={styles.checkText}>✓</ThemedText>
+                      )}
+                    </Pressable>
+                  </ThemedView>
+                ))}
+              </ThemedView>
+            );
+          })
         )}
       </ScrollView>
 
@@ -256,7 +341,6 @@ export default function WorkoutScreen() {
         <Button label="Finalizar entreno" onPress={handleFinish} />
       </ThemedView>
 
-      {/* Overlay del timer de descanso - va al final para quedar arriba de todo */}
       {restSeconds > 0 && (
         <View style={styles.timerOverlay}>
           <ThemedText style={styles.timerLabel}>Descansando</ThemedText>
@@ -296,6 +380,12 @@ const styles = StyleSheet.create({
   scroll: { padding: 20, gap: 16, paddingBottom: 120 },
   header: { gap: 4, marginTop: 10, marginBottom: 8 },
   muted: { opacity: 0.6 },
+  lastHint: {
+    fontSize: 12,
+    color: "#3b82f6",
+    marginTop: 2,
+    fontWeight: "500",
+  },
   empty: { padding: 40, alignItems: "center" },
   exerciseCard: {
     padding: 16,
@@ -386,7 +476,7 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     paddingHorizontal: 32,
     backgroundColor: "white",
-    borderRadius: 999, // pill
+    borderRadius: 999,
     minWidth: 100,
     alignItems: "center",
   },

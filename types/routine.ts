@@ -1,5 +1,6 @@
 export interface Routine {
   routine_id: number;
   routine_desc: string;
-  is_active?: number;
+  is_active: number;
+  default_rest_seconds: number;
 }

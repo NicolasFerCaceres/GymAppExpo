@@ -1,6 +1,10 @@
 import { WorkoutSet } from "@/types/workout";
 import { SQLiteDatabase } from "expo-sqlite";
 
+// dentro de workoutSetRepository.ts
+
+
+
 export async function createWorkoutSet(
   db: SQLiteDatabase,
   workout_ex_id: number,
@@ -177,5 +181,42 @@ export async function deleteWorkoutSet(
   } catch (error) {
     if (error instanceof Error) throw error;
     throw new Error(`No se pudo eliminar la serie. Error: ${error}`);
+  }
+}
+
+export interface LastSetData {
+  reps: number;
+  weight: number;
+}
+
+export async function getLastSetForExercise(
+  db: SQLiteDatabase,
+  exercise_id: number,
+): Promise<LastSetData | null> {
+  if (
+    !exercise_id ||
+    isNaN(Number(exercise_id)) ||
+    exercise_id <= 0 ||
+    !Number.isInteger(exercise_id)
+  ) {
+    throw new Error(`El id de ejercicio debe ser un numero valido mayor que 0`);
+  }
+
+  try {
+    const result = await db.getFirstAsync<LastSetData>(
+      `SELECT ws.reps, ws.weight
+       FROM workout_set ws
+       JOIN workout_exercise we ON we.workout_ex_id = ws.workout_ex_id
+       JOIN workout w ON w.workout_id = we.workout_id
+       WHERE we.exercise_id = ?
+       ORDER BY w.date DESC, ws.set_number DESC
+       LIMIT 1`,
+      [exercise_id],
+    );
+    return result ?? null;
+  } catch (error) {
+    throw new Error(
+      `No se pudo obtener la ultima serie del ejercicio. Error: ${error}`,
+    );
   }
 }
